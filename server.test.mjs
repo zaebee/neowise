@@ -48,7 +48,7 @@ test("timeout is capped near 300ms", async () => {
   assert.ok(elapsed < 800, `expected under 800ms, got ${elapsed}ms`);
 });
 
-test("timeout signal is propagated and cancels classify", async () => {
+test("classify honours an aborted signal (mock supports the server's timeout)", async () => {
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(classify("[timeout]", { signal: controller.signal }), { name: "AbortError" });

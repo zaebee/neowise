@@ -53,9 +53,15 @@
           topic.textContent = TOPIC_TITLES[data.topic] ?? data.topic;
           draft.textContent = data.draft;
           answer.hidden = false;
-        } else {
+        } else if (reply.ok && data.status === "manual_review") {
           notice.textContent = "Не удалось разобрать заявку автоматически. Проверьте текст и при необходимости ответьте клиенту вручную.";
           notice.hidden = false;
+        } else if (reply.status === 400 && data.status === "invalid_input") {
+          notice.textContent = "Текст заявки пустой или некорректный. Введите текст и попробуйте ещё раз.";
+          notice.hidden = false;
+        } else {
+          errorBox.textContent = "Произошла ошибка приложения. Попробуйте ещё раз позже.";
+          errorBox.hidden = false;
         }
       } catch {
         errorBox.textContent = "Не удалось отправить заявку. Проверьте соединение с сервером и попробуйте ещё раз.";
