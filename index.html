@@ -16,38 +16,53 @@
   <form>
     <label for="message">Текст заявки</label>
     <textarea id="message" rows="4"></textarea>
-    <button type="submit">Разобрать заявку</button>
+    <button type="submit" id="submit">Разобрать заявку</button>
   </form>
   <div id="answer" hidden>
     <h2 id="topic"></h2>
     <pre id="draft"></pre>
   </div>
   <p id="notice" aria-live="polite" hidden></p>
+  <p id="error" aria-live="polite" hidden></p>
   <script type="module">
     const form = document.querySelector("form");
+    const submitButton = document.querySelector("#submit");
     const answer = document.querySelector("#answer");
     const topic = document.querySelector("#topic");
     const draft = document.querySelector("#draft");
     const notice = document.querySelector("#notice");
+    const errorBox = document.querySelector("#error");
     const TOPIC_TITLES = { delivery: "Доставка", pricing: "Стоимость", other: "Другое" };
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       answer.hidden = true;
       notice.hidden = true;
+      errorBox.hidden = true;
       draft.textContent = "";
-      const reply = await fetch("/api/triage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: document.querySelector("#message").value }),
-      });
-      const data = await reply.json();
-      if (reply.ok && data.status === "ready") {
-        topic.textContent = TOPIC_TITLES[data.topic] ?? data.topic;
-        draft.textContent = data.draft;
-        answer.hidden = false;
-      } else {
-        notice.textContent = "Не удалось разобрать заявку автоматически. Проверьте текст и при необходимости ответьте клиенту вручную.";
-        notice.hidden = false;
+      topic.textContent = "";
+      submitButton.disabled = true;
+      submitButton.textContent = "Разбираем заявку…";
+      try {
+        const reply = await fetch("/api/triage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: document.querySelector("#message").value }),
+        });
+        const data = await reply.json();
+        if (reply.ok && data.status === "ready") {
+          topic.textContent = TOPIC_TITLES[data.topic] ?? data.topic;
+          draft.textContent = data.draft;
+          answer.hidden = false;
+        } else {
+          notice.textContent = "Не удалось разобрать заявку автоматически. Проверьте текст и при необходимости ответьте клиенту вручную.";
+          notice.hidden = false;
+        }
+      } catch {
+        errorBox.textContent = "Не удалось отправить заявку. Проверьте соединение с сервером и попробуйте ещё раз.";
+        errorBox.hidden = false;
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Разобрать заявку";
       }
     });
   </script>

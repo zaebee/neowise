@@ -2,8 +2,9 @@ import { test, after } from "node:test";
 import { once } from "node:events";
 import assert from "node:assert/strict";
 import { start } from "./server.mjs";
+import { classify } from "./mock-ai.mjs";
 
-const server = start();
+const server = start(0);
 await once(server, "listening");
 
 async function post(body) {
@@ -42,7 +43,17 @@ test("timeout is capped near 300ms", async () => {
   const result = await post({ text: "[timeout]" });
   assert.equal(result.body.status, "manual_review");
   const elapsed = Date.now() - startAt;
-  assert.ok(elapsed < 1000, `expected under 1s, got ${elapsed}ms`);
+  // Порог не ровно 300 мс: к 300 мс таймаута добавляется планирование
+  // fetch/HTTP на той же машине, поэтому допускаем запас до 800 мс.
+  assert.ok(elapsed < 800, `expected under 800ms, got ${elapsed}ms`);
 });
 
-after(() => server.close());
+test("timeout signal is propagated and cancels classify", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(classify("[timeout]", { signal: controller.signal }), { name: "AbortError" });
+});
+
+after(async () => {
+  await new Promise((resolve) => server.close(resolve));
+});
